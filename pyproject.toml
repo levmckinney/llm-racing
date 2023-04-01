@@ -1,0 +1,19 @@
+[project]
+name = "llm-racing"
+description = "Testing the speed of llm models at inference"
+requires-python = ">=3.8"
+dependencies = [
+    "torch",
+    "transformers",
+    "ipykernel",
+    "openai",
+    "huggingface_hub",
+    "deepspeed==0.8.3",
+    "python-dotenv",
+    "statsmodels",
+    "pandas",
+]
+version="0.0.1"
+
+[tool.setuptools.packages.find]
+namespaces = false
