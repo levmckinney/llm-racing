@@ -36,10 +36,15 @@ class LLMRacer(abc.ABC):
                 - `time`: Time taken to generate tokens.
         """
         results = []
-        for prompt in tqdm(prompts):
-            if target_tokens:
-                max_tokens = target_tokens
-                min_tokens = target_tokens - 1
+        target_tokens = target_tokens if target_tokens else [None] * len(prompts)
+        print("running once to warm up")
+        self.generate_tokens(prompts[0], max_tokens=max_tokens, min_tokens=0)
+
+        print("Starting time trial for", self.model_name)
+        for prompt, target in tqdm(zip(prompts, target_tokens)):
+            if target is not None:
+                max_tokens = min(target, max_tokens)
+                min_tokens = target - 1
             else:
                 min_tokens = 0
             start_time = time.time()
