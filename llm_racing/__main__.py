@@ -1,7 +1,10 @@
-from tqdm import tqdm
+import os
+import json
+import datetime
+import subprocess
 from llm_racing.openai import OpenAIChatRacer
 from llm_racing.local_deepspeed import DeepSpeedRacer
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser
 
 
 def get_available_models():
@@ -18,16 +21,32 @@ def get_available_models():
         'EleutherAI/pythia-12b-deduped': lambda: DeepSpeedRacer('EleutherAI/pythia-12b-deduped'),
     }
 
+
+def get_git_commit_hash():
+    try:
+        commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8').strip()
+    except subprocess.CalledProcessError:
+        commit_hash = 'unknown'
+    return commit_hash
+
+def get_git_diff():
+    try:
+        diff = subprocess.check_output(['git', 'diff']).decode('utf-8')
+    except subprocess.CalledProcessError:
+        diff = 'unknown'
+    return diff
+
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument(
-        '--models', nargs='*', type=str, default=['EleutherAI/pythia-70m-deduped'], help='Subset of {get_available_models().keys()} to race.'
+        '--model', type=str, default='EleutherAI/pythia-70m-deduped', help=f'Model to evaluate must be one of {get_available_models().keys()} to race.'
     )
     parser.add_argument(
         '--prompts', nargs='*', type=str, default=[f'Count from 1 to {i}. \n 1, 2' for i in range(50, 550, 50)], help='A set of prompts to run against each model.'
     )
+    # Default to a timestamped file in the results directory.
     parser.add_argument(
-        '--output', type=str, default='results.csv', help='Where to save the results as a CSV with columns: tokens,time,model_name'
+        '--output', type=str, default=f'results/{datetime.datetime.now()}', help='Where to save the results as a CSV with columns: tokens,time,model_name. And replication json.'
     )
     parser.add_argument(
         '--target_tokens', nargs='*', type=int, default=[i + 20 for i in range(50, 550, 50)], help='The target number of tokens for each prompt to elicit.'
@@ -37,13 +56,20 @@ if __name__ == '__main__':
     )
 
     racers = get_available_models()
-    
-    # print(args.models)
-    
+
     args = parser.parse_args()
     df = None
-    for model in tqdm(args.models):
-        racer = racers[model]()
-        results = racer.time_trial(args.prompts, max_tokens=args.max_tokens, target_tokens=args.target_tokens)
-        df = results if df is None else df.append(results)
-    df.to_csv(args.output, index=True)
+    racer = racers[args.model]()
+    results = racer.time_trial(args.prompts, max_tokens=args.max_tokens, target_tokens=args.target_tokens)
+    df = results if df is None else df.append(results)
+    os.makedirs(args.output, exist_ok=True)
+    df.to_csv(os.path.join(args.output, 'results.csv'), index=True)
+    
+    replication = {
+        'args': args.__dict__,
+        'commit_hash': get_git_commit_hash(),
+        'diff': get_git_diff(),
+        'timestamp': datetime.datetime.now().isoformat(),
+    }
+    with open(os.path.join(args.output, 'replication.json'), 'w') as f:
+        json.dump(replication, f)
