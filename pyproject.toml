@@ -3,12 +3,11 @@ name = "llm-racing"
 description = "Testing the speed of llm models at inference"
 requires-python = ">=3.8"
 dependencies = [
-    "torch",
-    "transformers",
+    "torch==2.0.0",
+    "transformers[deepspeed]",
     "ipykernel",
     "openai",
     "huggingface_hub",
-    "deepspeed==0.8.3",
     "python-dotenv",
     "statsmodels",
     "pandas",
