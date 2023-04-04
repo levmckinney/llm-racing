@@ -64,7 +64,7 @@ if __name__ == '__main__':
     )
     # Default to a timestamped file in the results directory.
     parser.add_argument(
-        '--output', type=str, default=f'results/{datetime.datetime.now()}', help='Where to save the results as a CSV with columns: tokens,time,model_name. And replication json.'
+        '--output', type=str, default=None, help='Where to save the results as a CSV with columns: tokens,time,model_name. And replication json.'
     )
     parser.add_argument(
         '--target_tokens', nargs='*', type=int, default=[i + 20 for i in range(50, 550, 50)], help='The target number of tokens for each prompt to elicit.'
@@ -78,10 +78,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
     df = None
     racer = racers[args.model]()
+    if args.outupt is None:
+        output = os.path.join('results', args.model + datetime.datetime.now())
     results = racer.time_trial(args.prompts, max_tokens=args.max_tokens, target_tokens=args.target_tokens)
     df = results if df is None else df.append(results)
-    os.makedirs(args.output, exist_ok=True)
-    df.to_csv(os.path.join(args.output, 'results.csv'), index=True)
+    os.makedirs(output, exist_ok=True)
+    df.to_csv(os.path.join(output, 'results.csv'), index=True)
     
     replication = {
         'args': args.__dict__,
