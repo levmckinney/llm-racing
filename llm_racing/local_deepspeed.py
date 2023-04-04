@@ -34,7 +34,8 @@ class DeepSpeedRacer(LLMRacer):
                 input_ids=tokenized_inputs['input_ids'],
                 attention_mask=tokenized_inputs['attention_mask'],
                 use_cache=True,
-                do_sample=True,
+                do_sample=False,
+                position_ids=None,
                 pad_token_id=self.tokenizer.eos_token_id,
                 min_length=min_tokens,
                 max_length=max_tokens

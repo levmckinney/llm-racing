@@ -29,12 +29,30 @@ def get_git_commit_hash():
         commit_hash = 'unknown'
     return commit_hash
 
+
 def get_git_diff():
     try:
         diff = subprocess.check_output(['git', 'diff']).decode('utf-8')
     except subprocess.CalledProcessError:
         diff = 'unknown'
     return diff
+
+
+def get_gpu_info():
+    try:
+        gpu_info = subprocess.check_output(['nvidia-smi', '--query-gpu=gpu_name,driver_version,memory.total,memory.used,memory.free', '--format=csv']).decode('utf-8')
+    except subprocess.CalledProcessError:
+        gpu_info = 'unknown'
+    return gpu_info
+
+
+def get_cpu_info():
+    try:
+        cpu_info = subprocess.check_output(['lscpu']).decode('utf-8')
+    except subprocess.CalledProcessError:
+        cpu_info = 'unknown'
+    return cpu_info
+
 
 if __name__ == '__main__':
     parser = ArgumentParser()
@@ -70,6 +88,8 @@ if __name__ == '__main__':
         'commit_hash': get_git_commit_hash(),
         'diff': get_git_diff(),
         'timestamp': datetime.datetime.now().isoformat(),
+        'gpu_info': get_gpu_info(),
+        'cpu_info': get_cpu_info(),
     }
     with open(os.path.join(args.output, 'replication.json'), 'w') as f:
         json.dump(replication, f)
