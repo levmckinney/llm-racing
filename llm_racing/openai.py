@@ -29,7 +29,8 @@ class OpenAIChatRacer(LLMRacer):
         super().__init__(engine)
         self.engine = engine
 
-    def generate_tokens(self, prompt: str, max_tokens: int) -> int:
+    def generate_tokens(self, prompt: str, max_tokens: int, min_tokens: int = 0) -> int:
+        del min_tokens
         response = openai.ChatCompletion.create(
             model=self.engine,
             messages=[{"role": "user", "content": prompt}],

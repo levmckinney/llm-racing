@@ -1,6 +1,6 @@
 import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
+from matplotlib import pyplot as plt
+import seaborn as sns
 import statsmodels.api as sm
 
 
@@ -16,31 +16,18 @@ def scatter_plots(data_frame: pd.DataFrame) -> plt.Figure:
             - `time`: Time taken to generate tokens.
 
     Returns:
-        A matplotlib figure containing a scatter plot for each model comparing
+        A Seaborn figure containing a scatter plot for each model comparing
         the number of tokens generated to the time taken to generate them.
     """
-    # Create a new matplotlib figure
-    fig, ax = plt.subplots()
+    plt.clf()
+    # Create a new Seaborn figure
+    fig = sns.scatterplot(data=data_frame, x='tokens', y='time', hue='model_name')
 
-    # Get the unique model names from the data_frame
-    model_names = data_frame["model_name"].unique()
-
-    # Iterate through the unique model names
-    for model_name in model_names:
-        # Extract the data for the current model
-        model_data = data_frame[data_frame["model_name"] == model_name]
-
-        # Create a scatter plot for the current model
-        ax.scatter(model_data["tokens"], model_data["time"], label=model_name)
-
-    # Add labels, title, and legend to the plot
-    ax.set_xlabel("Tokens Generated")
-    ax.set_ylabel("Time Taken (s)")
-    ax.set_title("Tokens Generated vs Time Taken for Each Model")
-    ax.legend()
+    # Add labels and title to the plot
+    fig.set(xlabel='Tokens Generated', ylabel='Time Taken (s)', title='Tokens Generated vs Time Taken for Each Model')
 
     # Return the figure
-    return fig
+    return fig.figure
 
 def plot_results(data_frame: pd.DataFrame, ci: float = 0.95) -> plt.Figure:
     """
@@ -54,9 +41,10 @@ def plot_results(data_frame: pd.DataFrame, ci: float = 0.95) -> plt.Figure:
         ci: Confidence interval to plot.
 
     Returns:
-        A matplotlib figure where the x-axis is the model name and the y-axis is 
+        A Seaborn figure where the x-axis is the model name and the y-axis is 
         the number of tokens generated per second with a confidence interval.
     """
+    plt.clf()
     grouped_data = data_frame.groupby('model_name')
 
     model_names = []
@@ -66,9 +54,9 @@ def plot_results(data_frame: pd.DataFrame, ci: float = 0.95) -> plt.Figure:
 
     # Iterate through each group (unique model_name) in the grouped data
     for model_name, group in grouped_data:
-        # Set X to be the 'tokens' column and y to be the 'time' column
-        X = group['tokens']
-        y = group['time']
+        # Set X to be the 'time' column and y to be the 'tokens' column
+        X = group['time']
+        y = group['tokens']
 
         # Add a constant term to the X matrix for the linear regression (for the intercept)
         X = sm.add_constant(X)
@@ -91,20 +79,34 @@ def plot_results(data_frame: pd.DataFrame, ci: float = 0.95) -> plt.Figure:
         lower_bounds.append(lower_bound)
         upper_bounds.append(upper_bound)
 
-    # Create a new plot
-    fig, ax = plt.subplots()
 
-    # Create the x values as integer indices for the bar plot
-    x = np.arange(len(model_names))
+    # Create a new DataFrame from the extracted data
+    results_df = pd.DataFrame({'Model Name': model_names, 'Tokens per Second': slopes,
+                               'Lower Bound': lower_bounds, 'Upper Bound': upper_bounds})
 
-    # Create a bar plot with error bars for the confidence intervals
-    ax.bar(x, slopes, yerr=[np.array(slopes) - np.array(lower_bounds), np.array(upper_bounds) - np.array(slopes)], capsize=10)
 
-    ax.set_xticks(x)
-    ax.set_xticklabels(model_names)
+    results_df.sort_values(by='Tokens per Second', inplace=True)
+    results_df.index = range(len(results_df))
+    print(results_df)
+    # create a color palette the length of the dataframe
+    colors = sns.color_palette('husl', n_colors=len(results_df))
 
-    ax.set_xlabel('Model Name')
-    ax.set_ylabel('Tokens Generated per Second')
-    ax.set_title('Tokens per Second vs Model')
 
-    return fig
+    # Create a new Seaborn barplot
+    fig = sns.barplot(
+        data=results_df, 
+        x=results_df.index, 
+        y='Tokens per Second', 
+        hue='Model Name',
+        dodge=False,
+        palette=colors,
+    )
+
+    for i, row in enumerate(results_df.itertuples()):
+        fig.errorbar(i, row._2, yerr=[[row._2 - row._3], [row._4 - row._2]], capsize=10, fmt='none', color='black')
+
+    # Remove ticks and x-axis labels since we are relying on colors and the legend
+    fig.set(xticklabels=[])
+    fig.tick_params(bottom=False)
+
+    return fig.figure

@@ -2,6 +2,9 @@ import os
 import json
 import datetime
 import subprocess
+import pandas as pd
+from llm_racing.plotting import plot_results, scatter_plots
+
 from llm_racing.openai import OpenAIChatRacer
 from llm_racing.local_deepspeed import DeepSpeedRacer
 from argparse import ArgumentParser
@@ -54,36 +57,15 @@ def get_cpu_info():
     return cpu_info
 
 
-if __name__ == '__main__':
-    parser = ArgumentParser()
-    parser.add_argument(
-        '--model', type=str, default='EleutherAI/pythia-70m-deduped', help=f'Model to evaluate must be one of {get_available_models().keys()} to race.'
-    )
-    parser.add_argument(
-        '--prompts', nargs='*', type=str, default=[f'Count from 1 to {i}. \n 1, 2' for i in range(50, 550, 50)], help='A set of prompts to run against each model.'
-    )
-    # Default to a timestamped file in the results directory.
-    parser.add_argument(
-        '--output', type=str, default=None, help='Where to save the results as a CSV with columns: tokens,time,model_name. And replication json.'
-    )
-    parser.add_argument(
-        '--target_tokens', nargs='*', type=int, default=[i + 20 for i in range(50, 550, 50)], help='The target number of tokens for each prompt to elicit.'
-    )
-    parser.add_argument(
-        '--max_tokens', type=int, default=1024, help='The maximum number of tokens to generate for each prompt.'
-    )
-
+def run_time_trial(args):
+    # Run a time trial for a given model.
     racers = get_available_models()
-
-    args = parser.parse_args()
-    df = None
     racer = racers[args.model]()
     if args.output is None:
         output = os.path.join('results', args.model + datetime.datetime.now().isoformat())
     results = racer.time_trial(args.prompts, max_tokens=args.max_tokens, target_tokens=args.target_tokens)
-    df = results if df is None else df.append(results)
     os.makedirs(output, exist_ok=True)
-    df.to_csv(os.path.join(output, 'results.csv'), index=True)
+    results.to_csv(os.path.join(output, 'results.csv'), index=True)
 
     replication = {
         'args': args.__dict__,
@@ -93,5 +75,65 @@ if __name__ == '__main__':
         'gpu_info': get_gpu_info(),
         'cpu_info': get_cpu_info(),
     }
+
     with open(os.path.join(output, 'replication.json'), 'w') as f:
         json.dump(replication, f)
+
+
+def run_plot(args):
+    frames = []
+    for results_path in args.csvs:
+        frames.append(pd.read_csv(results_path))
+    df = pd.concat(frames)
+    fig = plot_results(df, args.ci)
+    os.makedirs(args.output, exist_ok=True)
+    fig.savefig(
+        os.path.join(args.output, 'results.pdf'), 
+        format="pdf", 
+        bbox_inches="tight",
+    )
+    df = pd.concat(frames)
+    fig = scatter_plots(df)
+    fig.savefig(
+        os.path.join(args.output, 'scatter.pdf'),
+        format="pdf",
+        bbox_inches="tight",
+    )
+
+if __name__ == '__main__':
+    parser = ArgumentParser()
+    subparsers = parser.add_subparsers()
+    time_trial = subparsers.add_parser('time_trial')
+
+    time_trial.add_argument(
+        '--model', type=str, default='EleutherAI/pythia-70m-deduped', help=f'Model to evaluate must be one of {get_available_models().keys()} to race.'
+    )
+    time_trial.add_argument(
+        '--prompts', nargs='*', type=str, default=[f'Count from 1 to {i}. \n 1, 2' for i in range(50, 550, 50)], help='A set of prompts to run against each model.'
+    )
+    # Default to a timestamped file in the results directory.
+    time_trial.add_argument(
+        '--output', type=str, default=None, help='Where to save the results as a CSV with columns: tokens,time,model_name. And replication json.'
+    )
+    time_trial.add_argument(
+        '--target_tokens', nargs='*', type=int, default=[i + 20 for i in range(50, 550, 50)], help='The target number of tokens for each prompt to elicit.'
+    )
+    time_trial.add_argument(
+        '--max_tokens', type=int, default=1024, help='The maximum number of tokens to generate for each prompt.'
+    )
+    time_trial.set_defaults(func=run_time_trial)
+
+    plot = subparsers.add_parser('plot')
+    plot.add_argument(
+        '--csvs', nargs='*', type=str, default=None, help='A set of CSVs to plot.'
+    )
+    plot.add_argument(
+        '--output', type=str, default='figures', help='Where to save the results as a PDF.'
+    )
+    plot.add_argument(
+        '--ci', type=float, default=0.95, help='The confidence interval to use for the error bars.'
+    )
+    plot.set_defaults(func=run_plot)
+
+    args = parser.parse_args()
+    args.func(args)
