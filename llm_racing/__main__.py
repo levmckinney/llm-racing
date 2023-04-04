@@ -78,13 +78,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
     df = None
     racer = racers[args.model]()
-    if args.outupt is None:
-        output = os.path.join('results', args.model + datetime.datetime.now())
+    if args.output is None:
+        output = os.path.join('results', args.model + datetime.datetime.now().isoformat())
     results = racer.time_trial(args.prompts, max_tokens=args.max_tokens, target_tokens=args.target_tokens)
     df = results if df is None else df.append(results)
     os.makedirs(output, exist_ok=True)
     df.to_csv(os.path.join(output, 'results.csv'), index=True)
-    
+
     replication = {
         'args': args.__dict__,
         'commit_hash': get_git_commit_hash(),
@@ -93,5 +93,5 @@ if __name__ == '__main__':
         'gpu_info': get_gpu_info(),
         'cpu_info': get_cpu_info(),
     }
-    with open(os.path.join(args.output, 'replication.json'), 'w') as f:
+    with open(os.path.join(output, 'replication.json'), 'w') as f:
         json.dump(replication, f)

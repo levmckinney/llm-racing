@@ -1,6 +1,5 @@
 # https://docs.nvidia.com/deeplearning/frameworks/pytorch-release-notes/rel_22-08.html#rel_22-08
 FROM nvcr.io/nvidia/pytorch:22.08-py3
-LABEL maintainer="Hugging Face"
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -28,8 +27,10 @@ RUN python3 -m pip uninstall -y torch-tensorrt
 # recompile apex
 RUN python3 -m pip uninstall -y apex
 RUN git clone https://github.com/NVIDIA/apex
-#  `MAX_JOBS=1` disables parallel building to avoid cpu memory OOM when building image on GitHub Action (standard) runners
-RUN cd apex && MAX_JOBS=1 python3 -m pip install --global-option="--cpp_ext" --global-option="--cuda_ext" --no-cache -v --disable-pip-version-check .
+
+# Support V100 and A100
+ENV TORCH_CUDA_ARCH_LIST="7.0;8.0+PTX"
+RUN cd apex && python3 -m pip install --global-option="--cpp_ext" --global-option="--cuda_ext" --no-cache -v --disable-pip-version-check .
 
 # Pre-build **latest** DeepSpeed, so it would be ready for testing (otherwise, the 1st deepspeed test will timeout)
 RUN python3 -m pip uninstall -y deepspeed
