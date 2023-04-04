@@ -9,5 +9,5 @@ python -m llm_racing time_trial --model EleutherAI/pythia-1.4b-deduped
 python -m llm_racing time_trial --model EleutherAI/pythia-2.8b-deduped
 python -m llm_racing time_trial --model EleutherAI/pythia-6.9b-deduped
 python -m llm_racing time_trial --model EleutherAI/pythia-12b-deduped
-python -m llm_racing time_trial --model gpt-3.5-tubo
-python -m llm_racing time_trial --model gpt-4
+OPENAI_API_KEY=$OPENAI_API_KEY python -m llm_racing time_trial --model gpt-3.5-turbo
+OPENAI_API_KEY=$OPENAI_API_KEY python -m llm_racing time_trial --model gpt-4
