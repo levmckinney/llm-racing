@@ -29,7 +29,7 @@ def scatter_plots(data_frame: pd.DataFrame) -> plt.Figure:
     # Return the figure
     return fig.figure
 
-def plot_results(data_frame: pd.DataFrame, ci: float = 0.95) -> plt.Figure:
+def plot_results(data_frame: pd.DataFrame, ci: float = 0.95, include_legend: bool = True, include_x_ticks: bool = True) -> plt.Figure:
     """
     Plot the results of a time trial assuming some startup costs.
 
@@ -94,8 +94,8 @@ def plot_results(data_frame: pd.DataFrame, ci: float = 0.95) -> plt.Figure:
 
     # Create a new Seaborn barplot
     fig = sns.barplot(
-        data=results_df, 
-        x=results_df.index, 
+        data=results_df,
+        x='Model Name',
         y='Tokens per Second', 
         hue='Model Name',
         dodge=False,
@@ -105,8 +105,13 @@ def plot_results(data_frame: pd.DataFrame, ci: float = 0.95) -> plt.Figure:
     for i, row in enumerate(results_df.itertuples()):
         fig.errorbar(i, row._2, yerr=[[row._2 - row._3], [row._4 - row._2]], capsize=10, fmt='none', color='black')
 
-    # Remove ticks and x-axis labels since we are relying on colors and the legend
-    fig.set(xticklabels=[])
-    fig.tick_params(bottom=False)
+    if include_x_ticks:
+        plt.xticks(rotation=90)
+    else:
+        fig.set(xticklabels=[])
+        fig.tick_params(bottom=False)
+
+    if not include_legend:
+        fig.legend_.remove()
 
     return fig.figure

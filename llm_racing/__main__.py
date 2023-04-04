@@ -85,7 +85,7 @@ def run_plot(args):
     for results_path in args.csvs:
         frames.append(pd.read_csv(results_path))
     df = pd.concat(frames)
-    fig = plot_results(df, args.ci)
+    fig = plot_results(df, args.ci, args.bar_plot_legend, not args.no_bar_plot_x_ticks)
     os.makedirs(args.output, exist_ok=True)
     fig.savefig(
         os.path.join(args.output, 'results.pdf'), 
@@ -132,6 +132,12 @@ if __name__ == '__main__':
     )
     plot.add_argument(
         '--ci', type=float, default=0.95, help='The confidence interval to use for the error bars.'
+    )
+    plot.add_argument(
+        '--bar_plot_legend', action='store_true', default=False, help='Whether to include a legend.'
+    )
+    plot.add_argument(
+        '--no_bar_plot_x_ticks', action='store_true', default=False, help='Whether to include x ticks.'
     )
     plot.set_defaults(func=run_plot)
 
