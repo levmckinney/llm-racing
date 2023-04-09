@@ -3,7 +3,7 @@ import json
 import datetime
 import subprocess
 import pandas as pd
-from llm_racing.plotting import plot_results, scatter_plots
+from llm_racing.plotting import plot_results, scatter_plots, run_regression
 
 from llm_racing.openai import OpenAIChatRacer
 from llm_racing.local_deepspeed import DeepSpeedRacer
@@ -85,8 +85,11 @@ def run_plot(args):
     for results_path in args.csvs:
         frames.append(pd.read_csv(results_path))
     df = pd.concat(frames)
-    fig = plot_results(df, args.ci, args.bar_plot_legend, not args.no_bar_plot_x_ticks)
+
+    regression_results = run_regression(df, args.ci)
+    fig = plot_results(regression_results, args.bar_plot_legend, not args.no_bar_plot_x_ticks)
     os.makedirs(args.output, exist_ok=True)
+    regression_results.to_csv(os.path.join(args.output, 'regression_results.csv'), index=True)
     fig.savefig(
         os.path.join(args.output, 'results.pdf'), 
         format="pdf", 

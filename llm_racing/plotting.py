@@ -29,20 +29,24 @@ def scatter_plots(data_frame: pd.DataFrame) -> plt.Figure:
     # Return the figure
     return fig.figure
 
-def plot_results(data_frame: pd.DataFrame, ci: float = 0.95, include_legend: bool = True, include_x_ticks: bool = True) -> plt.Figure:
-    """
-    Plot the results of a time trial assuming some startup costs.
+
+def run_regression(data_frame: pd.DataFrame, ci: float = 0.95) -> pd.DataFrame:
+    """Run an OLS regression to estimate the number of tokens per second (TPS) and a ci.
 
     Args:
         data_frame: DataFrame where each row is a sample and the columns are:
             - `model_name`: Name of the model.
             - `tokens`: Number of tokens generated.
             - `time`: Time taken to generate tokens.
-        ci: Confidence interval to plot.
+        ci: Confidence interval to plot between 0 and 1.
 
     Returns:
-        A Seaborn figure where the x-axis is the model name and the y-axis is 
-        the number of tokens generated per second with a confidence interval.
+        A DataFrame where the columns are:
+            - `Model Name`: Name of the model.
+            - `Tokens Per Second`: Estimated number of tokens generated per second.
+            - `Lower Bound`: Lower bound of the confidence interval on TPS.
+            - `Upper Bound`: Upper bound of the confidence interval on TPS.
+            
     """
     plt.clf()
     grouped_data = data_frame.groupby('model_name')
@@ -81,20 +85,33 @@ def plot_results(data_frame: pd.DataFrame, ci: float = 0.95, include_legend: boo
 
 
     # Create a new DataFrame from the extracted data
-    results_df = pd.DataFrame({'Model Name': model_names, 'Tokens per Second': slopes,
+    return pd.DataFrame({'Model Name': model_names, 'Tokens per Second': slopes,
                                'Lower Bound': lower_bounds, 'Upper Bound': upper_bounds})
 
 
-    results_df.sort_values(by='Tokens per Second', inplace=True)
-    results_df.index = range(len(results_df))
-    print(results_df)
+
+def plot_results(regression_results: pd.DataFrame, include_legend: bool = True, include_x_ticks: bool = True) -> plt.Figure:
+    """
+    Plot the results of a time trial assuming some startup costs.
+
+    Args:
+        regression_results: Data frame returned by `run_regression`.
+        ci: Confidence interval to plot.
+
+    Returns:
+        A Seaborn figure where the x-axis is the model name and the y-axis is 
+        the number of tokens generated per second with a confidence interval.
+    """
+    regression_results.sort_values(by='Tokens per Second', inplace=True)
+    regression_results.index = range(len(regression_results))
+    print(regression_results)
     # create a color palette the length of the dataframe
-    colors = sns.color_palette('husl', n_colors=len(results_df))
+    colors = sns.color_palette('husl', n_colors=len(regression_results))
 
 
     # Create a new Seaborn barplot
     fig = sns.barplot(
-        data=results_df,
+        data=regression_results,
         x='Model Name',
         y='Tokens per Second', 
         hue='Model Name',
@@ -102,7 +119,7 @@ def plot_results(data_frame: pd.DataFrame, ci: float = 0.95, include_legend: boo
         palette=colors,
     )
 
-    for i, row in enumerate(results_df.itertuples()):
+    for i, row in enumerate(regression_results.itertuples()):
         fig.errorbar(i, row._2, yerr=[[row._2 - row._3], [row._4 - row._2]], capsize=10, fmt='none', color='black')
 
     if include_x_ticks:
