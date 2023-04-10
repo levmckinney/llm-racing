@@ -68,7 +68,7 @@ def run_time_trial(args):
     results.to_csv(os.path.join(output, 'results.csv'), index=True)
 
     replication = {
-        'args': args.__dict__,
+        'args': {k: v for k, v in args.__dict__.items() if k not in {'func'}},
         'commit_hash': get_git_commit_hash(),
         'diff': get_git_diff(),
         'timestamp': datetime.datetime.now().isoformat(),
